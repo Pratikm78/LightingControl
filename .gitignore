@@ -1,0 +1,30 @@
+# ESP-IDF build artifacts
+# Ignore all content in the build directory...
+/build/*
+# ...but NOT the .bin files inside it or its subdirectories
+!/build/**/*.bin
+/dist/
+/docs/
+sdkconfig.old
+
+# Local configuration files
+*.local
+*.local.*
+
+# IDE-specific files
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln
+*.project
+*.creator
+*.creator.user
+
+# Dependency directories
+/managed_components/
+
+# Other
+*.pyc
+*.pyo
+__pycache__/

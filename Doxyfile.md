@@ -1,0 +1,24 @@
+# Doxyfile for the ESP32 Template Framework project
+
+PROJECT_NAME           = "ESP32 Template Framework"
+PROJECT_BRIEF          = "A modular framework for ESP32 applications"
+PROJECT_LOGO           =
+OUTPUT_DIRECTORY       = docs
+
+# --- Input Files ---
+INPUT                  = main/inc main/src README.md
+RECURSIVE              = YES
+
+# --- Output Generation ---
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+
+# --- Extraction Settings ---
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+
+# --- Diagrams and Graphs (Optional, requires Graphviz/dot) ---
+HAVE_DOT               = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES

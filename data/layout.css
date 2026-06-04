@@ -1,0 +1,207 @@
+/* --- DARK MODE PALETTE --- */
+:root {
+    --primary-color: #00bcd4; /* Vibrant Cyan/Teal for highlights */
+    --primary-hover: #0097a7;
+    --text-color: #e0e0e0; /* Light gray for main text */
+    --background-color: #121212; /* Very dark background */
+    /* Changed card background to be slightly transparent for the blur effect */
+    --card-background: rgba(30, 30, 30, 0.85); 
+    --border-color: #333333;
+    --input-focus-border: #00bcd4;
+    --placeholder-color: #888888;
+}
+
+/* Base Styles */
+html {
+    font-family: 'Roboto', sans-serif;
+    height: 100%;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    color: var(--text-color);
+    background-color: var(--background-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    position: relative; 
+    overflow: hidden; 
+}
+
+/* --- COOL VECTOR ANIMATION START: Multiple Shapes & Background --- */
+
+/* Main container for the moving vector shapes */
+.vector-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Subtle radial gradient for depth */
+    background: radial-gradient(circle, rgba(0, 188, 212, 0.05) 0%, rgba(18, 18, 18, 1) 70%);
+    z-index: -2;
+}
+
+@keyframes move1 {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(100vw, 100vh) rotate(360deg); }
+}
+
+@keyframes move2 {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(-100vw, -100vh) rotate(-360deg); }
+}
+
+/* Create 4 large, transparent animated shapes */
+.vector-background::before,
+.vector-background::after,
+.vector-background-shape3,
+.vector-background-shape4 {
+    content: '';
+    position: absolute;
+    border: 1px solid rgba(0, 188, 212, 0.1);
+    box-shadow: 0 0 15px rgba(0, 188, 212, 0.15);
+    background: rgba(0, 188, 212, 0.05);
+    width: 150vw; /* Very large shapes */
+    height: 150vh;
+    opacity: 0.1;
+    z-index: -1;
+}
+
+/* Shape 1 (Before): Diamond, moving slow-left */
+.vector-background::before {
+    top: -50vh;
+    left: -50vw;
+    animation: move1 80s linear infinite;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); 
+}
+
+/* Shape 2 (After): Circle, moving fast-right */
+.vector-background::after {
+    bottom: -50vh;
+    right: -50vw;
+    animation: move2 60s reverse linear infinite;
+    border-radius: 50%; 
+}
+
+/* --- COOL ANIMATION EFFECT: Frosted Glass Container --- */
+.container1 {
+    width: 100%;
+    max-width: 380px;
+    background: var(--card-background);
+    border-radius: 12px; 
+    border: 1px solid rgba(0, 188, 212, 0.2); /* Light border for definition */
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8); 
+    overflow: hidden;
+    position: relative; 
+    z-index: 1;
+    /* The key modern effect: blur the background underneath the container */
+    backdrop-filter: blur(8px); 
+    -webkit-backdrop-filter: blur(8px); /* Safari support */
+}
+
+/* Rest of the styles remain the same for dark mode consistency */
+
+.main-content {
+    padding: 30px 20px; 
+}
+
+/* Header/Logo Area */
+.header-logo {
+    text-align: center;
+    padding-bottom: 25px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.main-title {
+    font-size: 32px; 
+    color: var(--primary-color);
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: var(--text-color);
+    margin: 5px 0 0 0;
+    opacity: 0.7;
+}
+
+/* Form Wrapper & Headings */
+.wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.section-title {
+    font-size: 20px;
+    color: var(--text-color);
+    margin: 0 0 20px 0;
+    font-weight: 500;
+}
+
+/* Inputs, Selects */
+.wrapper input:not([type="submit"]):not([type="checkbox"]):not([type="file"]):not([type="button"]),
+.wrapper select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-color);
+    background-color: var(--card-background); 
+    font-size: 16px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.wrapper input:focus,
+.wrapper select:focus {
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 0.2rem rgba(0, 188, 212, 0.25);
+    outline: none;
+}
+
+/* Placeholder Styling */
+.wrapper input::placeholder {
+    color: var(--placeholder-color);
+    font-style: italic;
+}
+
+/* Submit/Connect Button */
+.wrapper p.button input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 5px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--card-background);
+    background-color: var(--primary-color);
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s, transform 0.1s;
+}
+
+.wrapper p.button input:hover {
+    background-color: var(--primary-hover);
+}
+
+.wrapper p.button input:active {
+    transform: translateY(1px);
+}
+
+/* Confirmation Message Style */
+#confirmation-message {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1.2em;
+}

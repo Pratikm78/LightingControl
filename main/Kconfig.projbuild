@@ -1,0 +1,21 @@
+menu "OTA Updater Configuration"
+
+    config OTA_GITHUB_USERNAME
+        string "GitHub Username"
+        default "YOUR_GITHUB_USERNAME"
+        help
+            GitHub username or organization where the repository is hosted.
+
+    config OTA_GITHUB_REPO_NAME
+        string "GitHub Repository Name"
+        default "YOUR_REPO_NAME"
+        help
+            The name of the GitHub repository for OTA updates.
+
+    config OTA_GITHUB_TOKEN
+        string "GitHub Personal Access Token"
+        default "YOUR_GITHUB_TOKEN"
+        help
+            A GitHub Personal Access Token with 'repo' scope to access private repositories.
+
+endmenu

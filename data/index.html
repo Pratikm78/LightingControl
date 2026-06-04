@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="layout.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="Script.js"></script>
+    <style>
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-bottom: 1em;
+        }
+
+        .password-container input {
+            width: 100%;
+            padding-right: 40px; /* Make space for the icon */
+            box-sizing: border-box;
+        }
+
+        .toggle-icon {
+            position: absolute;
+            right: 10px;
+            cursor: pointer;
+            user-select: none; /* Prevent text selection on the icon */
+            font-size: 1.2em;
+            color: #555;
+        }
+        .toggle-icon svg {
+            width: 22px;
+            height: 22px;
+            stroke-width: 2;
+            stroke: #555;
+        }
+    </style>
+    <title>Wi-Fi Setup</title>
+</head>
+
+<body>
+    <div class="vector-background"></div>
+    
+    <div class="container1">
+        <div class="main-content">
+            <div class="header-logo">
+                <h1 class="main-title">Device Setup</h1>
+                <p class="subtitle">Generic Wi-Fi Provisioning Interface</p>
+            </div>
+            
+            <div class="container">
+                <div id="Wifi_cred" class="tabcontent"> 
+                    <div class="wrapper">
+                        <form autocomplete="on">
+                            <p>
+                                <h1 class="section-title">Select Wi-Fi Network</h1>
+                                <label for="ssid" class="visually-hidden"> Wi-Fi Network</label> 
+                                <select id="ssidList" name="ssidList" required="required" single> 
+                                    <option value="" disabled selected>Scanning for networks...</option>
+                                </select>
+                            </p>
+                            <div class="password-container">
+                                <input id="wifipassword" name="wifipassword" placeholder="Password" required="required" type="password" />
+                                <span id="toggle-password" class="toggle-icon">
+                                    <svg id="eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    <svg id="eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                </span>
+                            </div>
+                            <p class="button"> 
+                                <input type="submit" value="Connect" onclick="Submit_Device_config(event)" /> 
+                            </p>
+                        </form>
+                        <div class="gap"> </div>
+                        <p class="button"> 
+                            <input type="button" value="Rescan" onclick="wifi_list()" /> 
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Automatically scan for Wi-Fi networks on page load
+            wifi_list();
+
+            const togglePassword = document.getElementById('toggle-password');
+            if (!togglePassword) return;
+
+            const passwordInput = document.getElementById('wifipassword');
+            const eyeOpen = document.getElementById('eye-open');
+            const eyeClosed = document.getElementById('eye-closed');
+
+            if (passwordInput && eyeOpen && eyeClosed) {
+                togglePassword.addEventListener('click', function () {
+                    // Toggle the type of the password input field
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+
+                    // Toggle the eye icon visibility
+                    eyeOpen.style.display = (type === 'password') ? 'block' : 'none';
+                    eyeClosed.style.display = (type === 'password') ? 'none' : 'block';
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
