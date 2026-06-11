@@ -48,7 +48,7 @@ def main():
 
     # Ensure working directory is clean (ignore build artifact)
     git_status = run_command("git status --porcelain --untracked-files=no")
-    if git_status and 'build/LightingCntrol.bin' not in git_status:
+    if git_status and 'build/LightingControl.bin' not in git_status:
         print("❌ Error: Your working directory is not clean. Please commit or stash your changes.")
         sys.exit(1)
 
