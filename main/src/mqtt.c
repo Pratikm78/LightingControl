@@ -1008,7 +1008,7 @@ static int MQTT_send_relay_status_message()
         }
 
         memset(topic, 0, sizeof(topic));
-        snprintf(topic, sizeof(topic), "lighting/control/%s/status", relay_name);
+        snprintf(topic, sizeof(topic), "access/control/%s/status", relay_name);
 
         if (my_mqtt.is_connected) {
             cJSON *root = cJSON_CreateObject();
