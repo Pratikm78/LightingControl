@@ -6,7 +6,7 @@ from deploy import build_project # Import the build function
 
 PROJECT_DESC_FILE = "project_description.json"
 VERSION_TXT_FILE = "VERSION.txt"
-FIRMWARE_BINARY_PATH = "build/LightingCntrol.bin"
+FIRMWARE_BINARY_PATH = "build/LightingControl.bin"
 
 def run_command(command):
     """Runs a shell command safely, exiting if it fails."""
