@@ -93,6 +93,7 @@ typedef struct
     msg_type_e msg_type;
     topic_type_e topic_type;
     int action_id;
+    int target_relay_index;
     bool msg_received;
 } incoming_message_t;
 
@@ -377,7 +378,7 @@ void MQTT_event_handler(void *event_handler_arg, esp_event_base_t event_base, in
     static char sub_topic[TOPIC_BUF_SIZE];
     static char check_topic[TOPIC_BUF_SIZE];
     static char ota_topic[TOPIC_BUF_SIZE];
-    snprintf(sub_topic, sizeof(sub_topic), "lighting/control/%s/action", my_mqtt.light_id);
+    snprintf(sub_topic, sizeof(sub_topic), "access/control/%s/lightaction", my_mqtt.light_id);
     snprintf(check_topic, sizeof(check_topic), "lighting/control/%s/ota/check", my_mqtt.light_id);
     snprintf(ota_topic, sizeof(ota_topic), "lighting/control/%s/ota/firmware/chunks", my_mqtt.light_id);
 
@@ -390,6 +391,17 @@ void MQTT_event_handler(void *event_handler_arg, esp_event_base_t event_base, in
         esp_mqtt_client_subscribe(my_mqtt.client, sub_topic, 1);
         esp_mqtt_client_subscribe(my_mqtt.client, check_topic, 1);
         esp_mqtt_client_subscribe(my_mqtt.client, ota_topic, 1);
+
+        // Subscribe to relay-specific action topics
+        int sys_type = LIGHT_CONTROL_get_system_type();
+        for (int i = 0; i < sys_type; i++) {
+            const char* name = LIGHT_CONTROL_get_relay_name(i);
+            if (strlen(name) > 0) {
+                char relay_action_topic[TOPIC_BUF_SIZE];
+                snprintf(relay_action_topic, sizeof(relay_action_topic), "access/control/%s/action", name);
+                esp_mqtt_client_subscribe(my_mqtt.client, relay_action_topic, 1);
+            }
+        }
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
@@ -412,6 +424,8 @@ void MQTT_event_handler(void *event_handler_arg, esp_event_base_t event_base, in
         // 1. Differentiate topic type ONLY on the first fragment (offset 0)
         if (event->current_data_offset == 0)
         {
+            incoming_message.target_relay_index = -1; // Default to general device level
+
             if (event->topic && event->topic_len >= 6 &&
                 strncmp(event->topic + event->topic_len - 6, "chunks", 6) == 0)
             {
@@ -425,6 +439,22 @@ void MQTT_event_handler(void *event_handler_arg, esp_event_base_t event_base, in
             else
             {
                 incoming_message.topic_type = TOPIC_ACTION;
+
+                // Check if this action is for a specific relay or the general device
+                char general_action[TOPIC_BUF_SIZE];
+                snprintf(general_action, sizeof(general_action), "access/control/%s/action", my_mqtt.light_id);
+
+                if (event->topic_len != strlen(general_action) || strncmp(event->topic, general_action, event->topic_len) != 0) {
+                    int system_type = LIGHT_CONTROL_get_system_type();
+                    for (int i = 0; i < system_type; i++) {
+                        char relay_action[TOPIC_BUF_SIZE];
+                        snprintf(relay_action, sizeof(relay_action), "access/control/%s/action", LIGHT_CONTROL_get_relay_name(i));
+                        if (event->topic_len == strlen(relay_action) && strncmp(event->topic, relay_action, event->topic_len) == 0) {
+                            incoming_message.target_relay_index = i;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -595,12 +625,24 @@ static void MQTT_handle_incoming_message(void)
     // 4. Processing Logic
     if (incoming_message.msg_type == MSG_TYPE_CONTROL)
     {
-        cJSON *relay_idx = cJSON_GetObjectItem(root, "relay");
         cJSON *state = cJSON_GetObjectItem(root, "state");
+        int target_idx = -1;
 
-        if (cJSON_IsNumber(relay_idx) && cJSON_IsBool(state))
+        if (incoming_message.target_relay_index != -1) {
+            // Identified by topic name: lighting/control/{relay_name}/action
+            target_idx = incoming_message.target_relay_index;
+        } else {
+            // General topic: lighting/control/{light_id}/action
+            // Payload must specify the relay index
+            cJSON *relay_json = cJSON_GetObjectItem(root, "relay");
+            if (cJSON_IsNumber(relay_json)) {
+                target_idx = relay_json->valueint;
+            }
+        }
+
+        if (target_idx != -1 && cJSON_IsBool(state))
         {
-            LIGHT_CONTROL_set_relay(relay_idx->valueint, cJSON_IsTrue(state));
+            LIGHT_CONTROL_set_relay(target_idx, cJSON_IsTrue(state));
             MQTT_send_ack_message(incoming_message.action_id);
             MQTT_send_relay_status_message();
         }
@@ -882,12 +924,23 @@ void MQTT_Update_config_save_to_flash()
         esp_mqtt_client_unsubscribe(my_mqtt.client, "lighting/control/+/action");
         esp_mqtt_client_unsubscribe(my_mqtt.client, "lighting/control/+/ota/check");
         esp_mqtt_client_unsubscribe(my_mqtt.client, "lighting/control/+/ota/firmware/chunks");
-        snprintf(sub_topic, sizeof(sub_topic), "lighting/control/%s/action", my_mqtt.light_id);
+        snprintf(sub_topic, sizeof(sub_topic), "access/control/%s/action", my_mqtt.light_id);
         snprintf(check_topic, sizeof(check_topic), "lighting/control/%s/ota/check", my_mqtt.light_id);
         snprintf(ota_topic, sizeof(ota_topic), "lighting/control/%s/ota/firmware/chunks", my_mqtt.light_id);
         esp_mqtt_client_subscribe(my_mqtt.client, sub_topic, 1);
         esp_mqtt_client_subscribe(my_mqtt.client, check_topic, 1);
         esp_mqtt_client_subscribe(my_mqtt.client, ota_topic, 1);
+
+        // Update subscriptions for relay-specific action topics
+        int system_type = LIGHT_CONTROL_get_system_type();
+        for (int i = 0; i < system_type; i++) {
+            const char* name = LIGHT_CONTROL_get_relay_name(i);
+            if (strlen(name) > 0) {
+                char relay_action_topic[TOPIC_BUF_SIZE];
+                snprintf(relay_action_topic, sizeof(relay_action_topic), "access/control/%s/action", name);
+                esp_mqtt_client_subscribe(my_mqtt.client, relay_action_topic, 1);
+            }
+        }
     }
 }
 
@@ -900,7 +953,7 @@ static int MQTT_send_ack_message(int action_id)
     char topic[100];
     int result = -1;
     memset(topic, 0, sizeof(topic));
-    snprintf(topic, sizeof(topic), "lighting/control/%s/status", my_mqtt.light_id);
+    snprintf(topic, sizeof(topic), "access/control/%s/lightstatus", my_mqtt.light_id);
     if (my_mqtt.is_connected)
     {
         cJSON *root = cJSON_CreateObject();
@@ -972,7 +1025,7 @@ static int MQTT_send_nack_message()
     char topic[100];
     int result = -1;
     memset(topic, 0, sizeof(topic));
-    snprintf(topic, sizeof(topic), "lighting/control/%s/status", my_mqtt.light_id);
+    snprintf(topic, sizeof(topic), "access/control/%s/lightstatus", my_mqtt.light_id);
     if (my_mqtt.is_connected)
     {
         cJSON *root = cJSON_CreateObject();
@@ -1008,7 +1061,7 @@ static int MQTT_send_relay_status_message()
         }
 
         memset(topic, 0, sizeof(topic));
-        snprintf(topic, sizeof(topic), "access/control/%s/status", relay_name);
+        snprintf(topic, sizeof(topic), "access/control/%s/lightstatus", relay_name);
 
         if (my_mqtt.is_connected) {
             cJSON *root = cJSON_CreateObject();
