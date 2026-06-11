@@ -103,7 +103,6 @@ esp_err_t MQTT_increment_message_count(void);
 static void MQTT_handle_incoming_message(void);
 static void MQTT_handle_ota_check(void);
 static void MQTT_handle_ota_chunk(void);
-void MQTT_Update_config_save_to_flash();
 static int MQTT_send_ack_message(int action_id);
 static int MQTT_send_ota_ack(int chunk_number, uint32_t crc32);
 static int MQTT_send_ota_check_response(bool allowed, const char *reason);
@@ -167,8 +166,32 @@ void MQTT_init(void)
     {
         my_mqtt.mqtt_tick.heartbeat_interval_sec = 60; // Default to 60 seconds if not set
         my_mqtt.mqtt_tick.info_interval_sec = 75;      // Default to 75 seconds if not set
-        strncpy(my_mqtt.light_id, "light1", sizeof(my_mqtt.light_id));
-        MQTT_Update_config_save_to_flash();
+        strncpy(my_mqtt.light_id, "db1", sizeof(my_mqtt.light_id));
+
+        // If config file is not found, initialize with both MQTT and Light Control defaults
+        cJSON *root = cJSON_CreateObject();
+        cJSON_AddNumberToObject(root, "hb_interval", my_mqtt.mqtt_tick.heartbeat_interval_sec);
+        cJSON_AddStringToObject(root, "light_id", my_mqtt.light_id);
+        cJSON_AddNumberToObject(root, "info_interval", my_mqtt.mqtt_tick.info_interval_sec);
+
+        int default_system_type;
+        char default_relay_names[3][32];
+        LIGHT_CONTROL_get_default_settings(&default_system_type, default_relay_names);
+        cJSON_AddNumberToObject(root, "system_type", default_system_type);
+        cJSON *relay_names_array = cJSON_CreateArray();
+        for (int i = 0; i < default_system_type; i++) {
+            cJSON_AddItemToArray(relay_names_array, cJSON_CreateString(default_relay_names[i]));
+        }
+        cJSON_AddItemToObject(root, "relay_names", relay_names_array);
+        char *json_string = cJSON_PrintUnformatted(root);
+        cJSON_Delete(root);
+        if (json_string) {
+            FLASH_write_to_file("config", json_string);
+            free(json_string);
+            ESP_LOGI(TAG, "Initial config created with defaults.");
+        } else {
+            ESP_LOGE(TAG, "Failed to create initial config JSON string.");
+        }
     }
 
     my_mqtt.is_connected = false;
@@ -568,18 +591,24 @@ static void MQTT_handle_incoming_message(void)
     {
         ESP_LOGI(TAG, "Received CONFIG message with actionID: %d", incoming_message.action_id);
         // Handle config message based on action_id
+
+        // 1. MQTT Specific intervals and IDs
         cJSON *heartbeat = cJSON_GetObjectItem(root, "hb_interval");
         if (heartbeat != NULL && cJSON_IsNumber(heartbeat))
         {
             my_mqtt.mqtt_tick.heartbeat_interval_sec = heartbeat->valueint;
             ESP_LOGI(TAG, "Updated heartbeat interval to %d seconds", (int)my_mqtt.mqtt_tick.heartbeat_interval_sec);
         }
+        if (cJSON_IsNumber(heartbeat)) my_mqtt.mqtt_tick.heartbeat_interval_sec = heartbeat->valueint;
+
         cJSON *info = cJSON_GetObjectItem(root, "info_interval");
         if (info != NULL && cJSON_IsNumber(info))
         {
             my_mqtt.mqtt_tick.info_interval_sec = info->valueint;
             ESP_LOGI(TAG, "Updated info interval to %d seconds", (int)my_mqtt.mqtt_tick.info_interval_sec);
         }
+        if (cJSON_IsNumber(info)) my_mqtt.mqtt_tick.info_interval_sec = info->valueint;
+
         cJSON *light_id = cJSON_GetObjectItem(root, "light_id");
         if (light_id != NULL && cJSON_IsString(light_id))
         {
@@ -587,6 +616,7 @@ static void MQTT_handle_incoming_message(void)
             ESP_LOGI(TAG, "Updated gate ID to %s", my_mqtt.light_id);
         }
         // Add other config items (hb_interval, etc) here
+        if (cJSON_IsString(light_id)) strncpy(my_mqtt.light_id, light_id->valuestring, sizeof(my_mqtt.light_id));
 
         MQTT_Update_config_save_to_flash();
         MQTT_send_ack_message(incoming_message.action_id);
@@ -595,6 +625,7 @@ static void MQTT_handle_incoming_message(void)
     {
         ESP_LOGI(TAG, "Received CONFIG message with actionID: %d", incoming_message.action_id);
         // Handle config message based on action_id
+        // 2. Hardware / Relay configuration
         cJSON *system_type_json = cJSON_GetObjectItem(root, "system_type");
         cJSON *relay_names_array = cJSON_GetObjectItem(root, "relay_names");
 
@@ -611,7 +642,12 @@ static void MQTT_handle_incoming_message(void)
         } else {
             // Existing config handling (hb_interval, info_interval, light_id)
             // ... (keep existing logic for other config items)
+            MQTT_send_relay_status_message();
         }
+
+        // Save all changes and acknowledge
+        MQTT_Update_config_save_to_flash();
+        MQTT_send_ack_message(incoming_message.action_id);
     }
     else if (incoming_message.msg_type == MSG_TYPE_OTA_CMD)
     {
@@ -809,6 +845,16 @@ void MQTT_Update_config_save_to_flash()
     cJSON_AddNumberToObject(root, "hb_interval", my_mqtt.mqtt_tick.heartbeat_interval_sec);
     cJSON_AddStringToObject(root, "light_id", my_mqtt.light_id);
     cJSON_AddNumberToObject(root, "info_interval", my_mqtt.mqtt_tick.info_interval_sec);
+    
+    // Include Light Control settings in the unified config
+    int sys_type = LIGHT_CONTROL_get_system_type();
+    cJSON_AddNumberToObject(root, "system_type", sys_type);
+    cJSON *relay_names = cJSON_CreateArray();
+    for (int i = 0; i < sys_type && i < 3; i++) {
+        cJSON_AddItemToArray(relay_names, cJSON_CreateString(LIGHT_CONTROL_get_relay_name(i)));
+    }
+    cJSON_AddItemToObject(root, "relay_names", relay_names);
+
     char *json_string = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
     FLASH_write_to_file("config", json_string);

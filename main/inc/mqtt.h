@@ -40,4 +40,9 @@ void MQTT_tick_1sec(void);
  * @note This function is called from a timer ISR, so it must be fast and non-blocking.
  */
 void MQTT_tick_1min(void);
+
+void MQTT_Update_config_save_to_flash();
+
+
+
 #endif /* MQTT_H */

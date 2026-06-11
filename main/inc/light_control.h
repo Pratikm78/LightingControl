@@ -39,6 +39,7 @@ void LIGHT_CONTROL_tick_1ms(void);
 int LIGHT_CONTROL_get_system_type(void);
 bool LIGHT_CONTROL_get_relay_state(int index);
 void LIGHT_CONTROL_set_relay(int index, bool state);
-const char* LIGHT_CONTROL_get_relay_name(int index);
+const char *LIGHT_CONTROL_get_relay_name(int index);
+void LIGHT_CONTROL_get_default_settings(int *system_type, char (*relay_names)[32]);
 void LIGHT_CONTROL_set_system_config(int type, const char* name1, const char* name2, const char* name3);
 #endif /* LIGHT_CONTROL_H */

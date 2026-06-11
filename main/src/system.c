@@ -166,7 +166,7 @@ void System_tasks()
 
                 MQTT_tick_1sec();
               //  LTE_tick_1s();
-                BUTTON_tick_1s();
+            //    BUTTON_tick_1s();
             }
             if (sys_tick.flag_1min)
             {
@@ -203,7 +203,7 @@ void System_tasks()
             //OTA_tasks();
             MQTT_tasks();
             LIGHT_CONTROL_tasks();
-            BUTTON_tasks();
+           // BUTTON_tasks();
             //   DATA_USAGE_tasks();
             // Add a small delay to prevent this loop from hogging the CPU.
             // This delay is crucial. It allows lower-priority tasks (like WiFi) to run.

@@ -13,11 +13,17 @@
 #include "driver/gpio.h"
 #include "cJSON.h"
 #include "flash.h"
+#include "mqtt.h" // Required for MQTT_Update_config_save_to_flash
 #include <string.h>
 
 /* Private Defines -----------------------------------------------------------*/
 static const char *TAG = "Light Control";
 
+/**
+ * RELAY_1_GPIO is set to 3 as per PCB layout.
+ * This pin may experience brief transients during early boot, potentially causing the relay to click.
+ * The software attempts to configure it as output low as early as possible.
+ */
 #define RELAY_1_GPIO 3
 #define RELAY_2_GPIO 6
 #define RELAY_3_GPIO 7
@@ -44,7 +50,7 @@ void LIGHT_CONTROL_init(void)
     cJSON *config_json = NULL;
     char config_buffer[256]; // Buffer for reading config from flash
 
-    if (FLASH_read_file("light_config", config_buffer, sizeof(config_buffer)) == ESP_OK) {
+    if (FLASH_read_file("config", config_buffer, sizeof(config_buffer)) == ESP_OK) {
         config_json = cJSON_Parse(config_buffer);
         if (config_json != NULL) {
             cJSON *system_type_json = cJSON_GetObjectItem(config_json, "system_type");
@@ -68,24 +74,30 @@ void LIGHT_CONTROL_init(void)
         } else {
             ESP_LOGE(TAG, "Failed to parse light_config from flash, using defaults.");
             s_light_config.system_type = 3; // Default
-            strncpy(s_light_config.relay_names[0], "court1", sizeof(s_light_config.relay_names[0]) - 1);
-            strncpy(s_light_config.relay_names[1], "court2", sizeof(s_light_config.relay_names[1]) - 1);
+            strncpy(s_light_config.relay_names[0], "gate1", sizeof(s_light_config.relay_names[0]) - 1);
+            strncpy(s_light_config.relay_names[1], "gate2", sizeof(s_light_config.relay_names[1]) - 1);
             strncpy(s_light_config.relay_names[2], "patio", sizeof(s_light_config.relay_names[2]) - 1);
             LIGHT_CONTROL_save_config_to_flash();
         }
     } else {
         ESP_LOGI(TAG, "light_config not found in flash, using defaults.");
         s_light_config.system_type = 3; // Default
-        strncpy(s_light_config.relay_names[0], "court1", sizeof(s_light_config.relay_names[0]) - 1);
-        strncpy(s_light_config.relay_names[1], "court2", sizeof(s_light_config.relay_names[1]) - 1);
+        strncpy(s_light_config.relay_names[0], "gate1", sizeof(s_light_config.relay_names[0]) - 1);
+        strncpy(s_light_config.relay_names[1], "gate2", sizeof(s_light_config.relay_names[1]) - 1);
         strncpy(s_light_config.relay_names[2], "patio", sizeof(s_light_config.relay_names[2]) - 1);
         LIGHT_CONTROL_save_config_to_flash();
     }
 
     for (int i = 0; i < s_light_config.system_type; i++) {
-        gpio_reset_pin(relay_gpios[i]);
-        gpio_set_direction(relay_gpios[i], GPIO_MODE_OUTPUT);
-        gpio_set_level(relay_gpios[i], 0);
+        gpio_config_t io_conf = {
+            .pin_bit_mask = (1ULL << relay_gpios[i]),
+            .mode = GPIO_MODE_OUTPUT,
+            .pull_up_en = GPIO_PULLUP_DISABLE,   // Ensure no pull-up
+            .pull_down_en = GPIO_PULLDOWN_DISABLE, // Ensure no pull-down
+            .intr_type = GPIO_INTR_DISABLE
+        };
+        gpio_config(&io_conf);
+        gpio_set_level(relay_gpios[i], 0); // Explicitly set low
         s_relay_states[i] = false;
     }
     ESP_LOGI(TAG, "Initialized %d-relay system", s_light_config.system_type);
@@ -107,11 +119,17 @@ void LIGHT_CONTROL_set_system_config(int type, const char* name1, const char* na
         s_light_config.relay_names[2][sizeof(s_light_config.relay_names[2]) - 1] = '\0';
     }
     LIGHT_CONTROL_save_config_to_flash();
-    // Re-initialize GPIOs based on new config
-    for (int i = 0; i < 3; i++) { // Reset all possible relay pins
-        gpio_reset_pin(relay_gpios[i]);
-        gpio_set_direction(relay_gpios[i], GPIO_MODE_OUTPUT);
-        gpio_set_level(relay_gpios[i], 0);
+    // Re-initialize GPIOs based on new config (configure all possible relay pins)
+    for (int i = 0; i < 3; i++) {
+        gpio_config_t io_conf = {
+            .pin_bit_mask = (1ULL << relay_gpios[i]),
+            .mode = GPIO_MODE_OUTPUT,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE
+        };
+        gpio_config(&io_conf);
+        gpio_set_level(relay_gpios[i], 0); // Explicitly set low
         s_relay_states[i] = false;
     }
     for (int i = 0; i < s_light_config.system_type; i++) {
@@ -153,22 +171,20 @@ const char* LIGHT_CONTROL_get_relay_name(int index)
 /* Private Function Implementation -----------------------------------------*/
 static void LIGHT_CONTROL_save_config_to_flash(void)
 {
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddNumberToObject(root, "system_type", s_light_config.system_type);
-    cJSON *relay_names_array = cJSON_CreateArray();
-    for (int i = 0; i < s_light_config.system_type; i++) {
-        cJSON_AddItemToArray(relay_names_array, cJSON_CreateString(s_light_config.relay_names[i]));
-    }
-    cJSON_AddItemToObject(root, "relay_names", relay_names_array);
+    // Redirect to the master config save function in mqtt.c
+    // This ensures all settings (MQTT + Relays) are persisted together in "config"
+    MQTT_Update_config_save_to_flash();
+}
 
-    char *json_string = cJSON_PrintUnformatted(root);
-    cJSON_Delete(root);
-
-    if (json_string) {
-        FLASH_write_to_file("light_config", json_string);
-        free(json_string);
-        ESP_LOGI(TAG, "Light config saved to flash.");
-    } else {
-        ESP_LOGE(TAG, "Failed to create JSON string for light config.");
+void LIGHT_CONTROL_get_default_settings(int *system_type, char (*relay_names)[32])
+{
+    if (system_type) *system_type = 3;
+    if (relay_names) {
+        strncpy(relay_names[0], "gate1", sizeof(relay_names[0]) - 1);
+        relay_names[0][sizeof(relay_names[0]) - 1] = '\0';
+        strncpy(relay_names[1], "gate2", sizeof(relay_names[1]) - 1);
+        relay_names[1][sizeof(relay_names[1]) - 1] = '\0';
+        strncpy(relay_names[2], "patio", sizeof(relay_names[2]) - 1);
+        relay_names[2][sizeof(relay_names[2]) - 1] = '\0';
     }
 }
