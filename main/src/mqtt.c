@@ -662,6 +662,13 @@ static void MQTT_handle_incoming_message(void)
         MQTT_send_ack_message(incoming_message.action_id);
         OTA_force_check_for_update();
     }
+    else if (incoming_message.msg_type == MSG_TYPE_REBOOT)
+    {
+        ESP_LOGI(TAG, "Received REBOOT message with actionID: %d", incoming_message.action_id);
+        MQTT_send_ack_message(incoming_message.action_id);
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Delay to allow MQTT to finish sending the ACK
+        esp_restart();
+    }
     else
     {
         ESP_LOGW(TAG, "Unknown message type or missing parameters");
