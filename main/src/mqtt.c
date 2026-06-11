@@ -991,37 +991,39 @@ static int MQTT_send_nack_message()
 /**
  * @brief send current relay status to MQTT broker
  *
+ * This function iterates through all configured relays and publishes their individual status
+ * to a topic specific to each relay, using the relay's name in the topic.
  */
 static int MQTT_send_relay_status_message()
 {
     char topic[100];
     int result = -1;
-    memset(topic, 0, sizeof(topic));
-    snprintf(topic, sizeof(topic), "lighting/control/%s/relay", my_mqtt.light_id);
-    if (my_mqtt.is_connected)
-    {
-        cJSON *root = cJSON_CreateObject();
-        cJSON_AddStringToObject(root, "msgType", "relay_status");
-        cJSON_AddNumberToObject(root, "seqID", my_mqtt.message_count);
-        cJSON_AddNumberToObject(root, "timestamp", TIME_MANAGEMENT_get_epoch_time() / 1000); // Unix epoch in seconds
+    int system_type = LIGHT_CONTROL_get_system_type();
 
-        cJSON *relays = cJSON_CreateArray();
-        int system_type = LIGHT_CONTROL_get_system_type();
-
-        for (int i = 0; i < system_type; i++)
-        { // Loop up to the configured system_type
-            cJSON *relay_obj = cJSON_CreateObject();
-            cJSON_AddStringToObject(relay_obj, "name", LIGHT_CONTROL_get_relay_name(i));
-            cJSON_AddBoolToObject(relay_obj, "state", LIGHT_CONTROL_get_relay_state(i)); // Use s_relay_states
-            cJSON_AddItemToArray(relays, relay_obj);
+    for (int i = 0; i < system_type; i++) {
+        const char* relay_name = LIGHT_CONTROL_get_relay_name(i);
+        if (strlen(relay_name) == 0) {
+            ESP_LOGW(TAG, "Relay name not set for index %d, skipping status message.", i);
+            continue;
         }
-        cJSON_AddItemToObject(root, "relays", relays);
 
-        char *json_string = cJSON_PrintUnformatted(root);
-        cJSON_Delete(root);
-        result = esp_mqtt_client_publish(my_mqtt.client, topic, json_string, 0, 1, 0);
-        free(json_string);
-        ESP_LOGI(TAG, "Relay status message sent");
+        memset(topic, 0, sizeof(topic));
+        snprintf(topic, sizeof(topic), "lighting/control/%s/status", relay_name);
+
+        if (my_mqtt.is_connected) {
+            cJSON *root = cJSON_CreateObject();
+            cJSON_AddStringToObject(root, "msgType", "relay_status");
+            cJSON_AddNumberToObject(root, "seqID", my_mqtt.message_count);
+            cJSON_AddNumberToObject(root, "timestamp", TIME_MANAGEMENT_get_epoch_time() / 1000); // Unix epoch in seconds
+            cJSON_AddStringToObject(root, "name", relay_name);
+            cJSON_AddBoolToObject(root, "state", LIGHT_CONTROL_get_relay_state(i));
+
+            char *json_string = cJSON_PrintUnformatted(root);
+            cJSON_Delete(root);
+            result = esp_mqtt_client_publish(my_mqtt.client, topic, json_string, 0, 1, 0);
+            free(json_string);
+            ESP_LOGI(TAG, "Relay status message sent for %s", relay_name);
+        }
     }
     return result;
 }

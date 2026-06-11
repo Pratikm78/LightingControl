@@ -28,22 +28,8 @@ Sent immediately after a successful connection (`msgType: "boot"`) and then peri
   "timestamp": 1693305600000,
   "uptime_mins": 0, 
   "version": "1.0.0",
-  "rssi": -60, 
-  "systemType": 3, 
-  "relayStates": [ 
-    { 
-      "name": "court1", 
-      "state": false 
-    }, 
-    { 
-      "name": "court2", 
-      "state": true 
-    }, 
-    { 
-      "name": "patio", 
-      "state": false 
-    } 
-  ],
+  "rssi": -60,
+  "systemType": 3,
   "config": {
     "hb_interval": 60,
     "info_interval": 75,
