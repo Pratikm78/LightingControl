@@ -18,6 +18,7 @@
 #include "esp_app_desc.h"
 #include "esp_crt_bundle.h"
 #include "driver/gpio.h"
+#include "esp_system.h"
 #include "ota.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
@@ -74,7 +75,8 @@ typedef enum
     MSG_TYPE_UNKNOWN = 0,
     MSG_TYPE_CONTROL,
     MSG_TYPE_CONFIG,
-    MSG_TYPE_OTA_CMD
+    MSG_TYPE_OTA_CMD,
+    MSG_TYPE_REBOOT
 } msg_type_e;
 
 typedef enum
@@ -570,6 +572,10 @@ static void MQTT_handle_incoming_message(void)
         else if (strcmp(msgType->valuestring, "ota") == 0)
         {
             incoming_message.msg_type = MSG_TYPE_OTA_CMD;
+        }
+        else if (strcmp(msgType->valuestring, "reboot") == 0)
+        {
+            incoming_message.msg_type = MSG_TYPE_REBOOT;
         }
     }
 
