@@ -122,7 +122,7 @@ void System_tasks()
             sys_states = LTE_INIT;
             break;
         case LTE_INIT:
-         //   LTE_init(); // Initialize the LTE module
+            LTE_init(); // Initialize the LTE module
             sys_states = WIFI_MANAGER_INIT;
             break;
         case WIFI_MANAGER_INIT:
@@ -165,7 +165,7 @@ void System_tasks()
                 
 
                 MQTT_tick_1sec();
-              //  LTE_tick_1s();
+                LTE_tick_1s();
             //    BUTTON_tick_1s();
             }
             if (sys_tick.flag_1min)
@@ -179,7 +179,7 @@ void System_tasks()
             if (sys_tick.flag_10min)
             {
                 sys_tick.flag_10min = false; // Consume the flag
-           ///     LTE_tick_10min(); // Call the LTE 10-minute tick function
+                LTE_tick_10min(); // Call the LTE 10-minute tick function
             }
             if (sys_tick.flag_1hr)
             {
@@ -189,7 +189,7 @@ void System_tasks()
             if (sys_tick.flag_3hr)
             {
                 sys_tick.flag_3hr = false; // Consume the flag
-           //     LTE_tick_3hr();            // Call the OTA 3-hour tick function
+                LTE_tick_3hr();            // Call the OTA 3-hour tick function
             }
             sys_states = SYSTEM_MAIN;
             break;
@@ -199,7 +199,7 @@ void System_tasks()
             TIME_MANAGEMENT_tasks();
             WIFI_MANAGER_tasks();
             AUTO_TIME_SYNC_tasks();
-          //  LTE_tasks();
+            LTE_tasks();
             //OTA_tasks();
             MQTT_tasks();
             LIGHT_CONTROL_tasks();
