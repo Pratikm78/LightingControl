@@ -398,7 +398,7 @@ void MQTT_event_handler(void *event_handler_arg, esp_event_base_t event_base, in
             const char* name = LIGHT_CONTROL_get_relay_name(i);
             if (strlen(name) > 0) {
                 char relay_action_topic[TOPIC_BUF_SIZE];
-                snprintf(relay_action_topic, sizeof(relay_action_topic), "access/control/%s/action", name);
+                snprintf(relay_action_topic, sizeof(relay_action_topic), "access/control/%s/lightaction", name);
                 esp_mqtt_client_subscribe(my_mqtt.client, relay_action_topic, 1);
             }
         }
@@ -442,13 +442,13 @@ void MQTT_event_handler(void *event_handler_arg, esp_event_base_t event_base, in
 
                 // Check if this action is for a specific relay or the general device
                 char general_action[TOPIC_BUF_SIZE];
-                snprintf(general_action, sizeof(general_action), "access/control/%s/action", my_mqtt.light_id);
+                snprintf(general_action, sizeof(general_action), "access/control/%s/lightaction", my_mqtt.light_id);
 
                 if (event->topic_len != strlen(general_action) || strncmp(event->topic, general_action, event->topic_len) != 0) {
                     int system_type = LIGHT_CONTROL_get_system_type();
                     for (int i = 0; i < system_type; i++) {
                         char relay_action[TOPIC_BUF_SIZE];
-                        snprintf(relay_action, sizeof(relay_action), "access/control/%s/action", LIGHT_CONTROL_get_relay_name(i));
+                        snprintf(relay_action, sizeof(relay_action), "access/control/%s/lightaction", LIGHT_CONTROL_get_relay_name(i));
                         if (event->topic_len == strlen(relay_action) && strncmp(event->topic, relay_action, event->topic_len) == 0) {
                             incoming_message.target_relay_index = i;
                             break;
@@ -921,10 +921,10 @@ void MQTT_Update_config_save_to_flash()
     ESP_LOGI(TAG, "Config updated and saved to flash");
     if (my_mqtt.is_connected)
     {
-        esp_mqtt_client_unsubscribe(my_mqtt.client, "lighting/control/+/action");
+        esp_mqtt_client_unsubscribe(my_mqtt.client, "lighting/control/+/lightaction");
         esp_mqtt_client_unsubscribe(my_mqtt.client, "lighting/control/+/ota/check");
         esp_mqtt_client_unsubscribe(my_mqtt.client, "lighting/control/+/ota/firmware/chunks");
-        snprintf(sub_topic, sizeof(sub_topic), "access/control/%s/action", my_mqtt.light_id);
+        snprintf(sub_topic, sizeof(sub_topic), "access/control/%s/lightaction", my_mqtt.light_id);
         snprintf(check_topic, sizeof(check_topic), "lighting/control/%s/ota/check", my_mqtt.light_id);
         snprintf(ota_topic, sizeof(ota_topic), "lighting/control/%s/ota/firmware/chunks", my_mqtt.light_id);
         esp_mqtt_client_subscribe(my_mqtt.client, sub_topic, 1);
@@ -937,7 +937,7 @@ void MQTT_Update_config_save_to_flash()
             const char* name = LIGHT_CONTROL_get_relay_name(i);
             if (strlen(name) > 0) {
                 char relay_action_topic[TOPIC_BUF_SIZE];
-                snprintf(relay_action_topic, sizeof(relay_action_topic), "access/control/%s/action", name);
+                snprintf(relay_action_topic, sizeof(relay_action_topic), "access/control/%s/lightaction", name);
                 esp_mqtt_client_subscribe(my_mqtt.client, relay_action_topic, 1);
             }
         }
